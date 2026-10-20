@@ -4,6 +4,11 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum JSONType
 {
@@ -27,7 +32,7 @@ struct JSONValue
     {
         bool boolValue;
         double numberValue;
-        const char *stringValue;
+        char *stringValue;
         JSONArray *arrayValue;
         JSONObject *objectValue;
     };
@@ -52,4 +57,18 @@ struct JSONObject
     size_t capacity;
     JSONKeyValuePair *pairs;
 };
+
+const char *tinyjson_version(void);
+
+void json_value_free(JSONValue *value);
+
+/* JSON Array */
+bool json_array_init(JSONArray *array);
+bool json_array_push(JSONArray *array, JSONValue value);
+void json_array_free(JSONArray *array);
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* TINYJSON_H */
