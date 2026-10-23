@@ -3,6 +3,17 @@
 #include <string.h>
 #include <stdint.h>
 
+/**
+ * @brief Portable replacement for POSIX strdup().
+ *
+ * Allocates a NUL-terminated copy of @p s. Named with an internal_ prefix
+ * because "strdup" itself is reserved by POSIX and may already be declared by
+ * <string.h>.
+ *
+ * @param s NUL-terminated string to copy. Must not be NULL.
+ * @return Heap-allocated copy owned by the caller, or NULL on allocation
+ *         failure. Free with free().
+ */
 static char *internal_strdup(const char *s)
 {
     size_t len = strlen(s) + 1;
