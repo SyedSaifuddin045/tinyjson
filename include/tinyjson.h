@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -32,6 +33,7 @@ typedef enum JSONType
 {
     JSON_NULL,   /**< No value; no payload owned.              */
     JSON_BOOL,   /**< Member: value.boolValue.                */
+    JSON_INT,    /**< Member: value.intValue.                 */
     JSON_NUMBER, /**< Member: value.numberValue.              */
     JSON_STRING, /**< Member: value.stringValue (owned).      */
     JSON_ARRAY,  /**< Member: value.arrayValue (owned).       */
@@ -56,6 +58,7 @@ struct JSONValue
     union
     {
         bool boolValue;          /**< Valid when type == JSON_BOOL.   */
+        int64_t intValue;        /**< Valid when type == JSON_INT.    */
         double numberValue;      /**< Valid when type == JSON_NUMBER. */
         char *stringValue;       /**< Valid when type == JSON_STRING. NUL-terminated, owned. */
         JSONArray *arrayValue;   /**< Valid when type == JSON_ARRAY.  Owned. */
@@ -118,6 +121,71 @@ const char *tinyjson_version(void);
  */
 void json_value_free(JSONValue *value);
 
+/**
+ * @brief Construct a JSON null value.
+ *
+ * @param out Destination. Must not hold an owned payload (constructors do not
+ *            free existing contents). May be NULL, in which case this is a
+ *            no-op. On return @c out->type is JSON_NULL.
+ */
+void json_value_null(JSONValue *out);
+
+/**
+ * @brief Construct a JSON bool value.
+ *
+ * @param out   Destination. Must not hold an owned payload. May be NULL.
+ * @param value Boolean payload.
+ */
+void json_value_bool(JSONValue *out, bool value);
+
+/**
+ * @brief Construct a JSON integer value.
+ *
+ * @param out   Destination. Must not hold an owned payload. May be NULL.
+ * @param value Signed 64-bit payload.
+ */
+void json_value_int(JSONValue *out, int64_t value);
+
+/**
+ * @brief Construct a JSON number (floating point) value.
+ *
+ * @param out   Destination. Must not hold an owned payload. May be NULL.
+ * @param value IEEE-754 double payload.
+ */
+void json_value_number(JSONValue *out, double value);
+
+/**
+ * @brief Construct a JSON string value by copying @p value.
+ *
+ * The destination owns an independent copy; the caller keeps ownership of
+ * @p value. Only this constructor can fail, because it allocates.
+ *
+ * @param out   Destination. Must not hold an owned payload. May be NULL.
+ * @param value NUL-terminated source string. Must not be NULL.
+ *
+ * @return true on success; false if @p out or @p value is NULL, or allocation
+ *         fails. On failure @p out is left untouched.
+ */
+bool json_value_string(JSONValue *out, const char *value);
+
+/**
+ * @brief Deep-copy a value.
+ *
+ * Copies scalars by value and duplicates every owned payload: strings are
+ * copied, arrays and objects are copied recursively, including their keys.
+ * The source is not modified and the copy is fully independent, so freeing
+ * either value never affects the other.
+ *
+ * @param dst Destination. Must not hold an owned payload. On success it holds
+ *            a deep copy; on failure it is reset to JSON_NULL. Must not be
+ *            NULL.
+ * @param src Source value. Must not be NULL.
+ *
+ * @return true on success; false if either argument is NULL or allocation
+ *         fails. A NUL-container or NULL-string source is copied as JSON_NULL.
+ */
+bool json_value_copy(JSONValue *dst, const JSONValue *src);
+
 /* ------------------------------------------------------------------------- */
 /* JSON Array                                                                */
 /* ------------------------------------------------------------------------- */
@@ -147,6 +215,19 @@ JSONArray *json_array_init(void);
  *         unchanged and the caller still owns @p value's payload.
  */
 bool json_array_push(JSONArray *array, JSONValue value);
+
+/**
+ * @brief Read an element without copying it.
+ *
+ * @param array Array to read from. May be NULL.
+ * @param index Zero-based element index.
+ *
+ * @return Pointer to the element, or NULL if @p array is NULL or
+ *         @p index >= @c array->size. The pointer refers to internal storage
+ *         and is invalidated by the next json_array_push() or
+ *         json_array_free() on @p array. Treat the result as read-only.
+ */
+const JSONValue *json_array_get(const JSONArray *array, size_t index);
 
 /**
  * @brief Destroy an array and everything it owns.
@@ -221,6 +302,20 @@ bool json_object_set(JSONObject *obj, const char *key, JSONValue value);
  *         @p obj. Treat the result as read-only.
  */
 const JSONValue *json_object_get(const JSONObject *obj, const char *key);
+
+/**
+ * @brief Remove a key and everything it owns.
+ *
+ * Frees the stored key, frees the value's owned payload, and shifts later
+ * pairs down to keep the remaining insertion order.
+ *
+ * @param obj Object to modify. May be NULL.
+ * @param key NUL-terminated key to remove. May be NULL.
+ *
+ * @return true if the key existed and was removed; false if @p obj or
+ *         @p key is NULL, or the key is absent (object left unchanged).
+ */
+bool json_object_delete(JSONObject *obj, const char *key);
 
 /**
  * @brief Destroy an object and everything it owns.

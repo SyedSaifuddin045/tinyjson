@@ -1,30 +1,9 @@
 #include "tinyjson.h"
+#include "internal.h"
+
 #include <stddef.h>
 #include <string.h>
 #include <stdint.h>
-
-/**
- * @brief Portable replacement for POSIX strdup().
- *
- * Allocates a NUL-terminated copy of @p s. Named with an internal_ prefix
- * because "strdup" itself is reserved by POSIX and may already be declared by
- * <string.h>.
- *
- * @param s NUL-terminated string to copy. Must not be NULL.
- * @return Heap-allocated copy owned by the caller, or NULL on allocation
- *         failure. Free with free().
- */
-static char *internal_strdup(const char *s)
-{
-    size_t len = strlen(s) + 1;
-    char *copy = malloc(len);
-
-    if (copy == NULL)
-        return NULL;
-
-    memcpy(copy, s, len);
-    return copy;
-}
 
 JSONObject* json_object_init(void)
 {
@@ -92,7 +71,7 @@ bool json_object_set(JSONObject* obj,const char* key,JSONValue value)
         obj->capacity = new_capacity;
     }
 
-    char *key_copy = internal_strdup(key);
+    char *key_copy = json_strdup(key);
     if (key_copy == NULL)
         return false;
 
@@ -111,6 +90,32 @@ const JSONValue* json_object_get(const JSONObject* obj, const char* key)
         return NULL;
 
     return &obj->pairs[index].value;
+}
+
+bool json_object_delete(JSONObject* obj, const char* key)
+{
+    size_t index;
+
+    if (obj == NULL || key == NULL)
+        return false;
+
+    if (!json_object_find(obj, key, &index))
+        return false;
+
+    free(obj->pairs[index].key);
+    json_value_free(&obj->pairs[index].value);
+
+    size_t remaining = obj->size - index - 1;
+
+    if (remaining > 0)
+    {
+        memmove(&obj->pairs[index],
+                &obj->pairs[index + 1],
+                remaining * sizeof(*obj->pairs));
+    }
+
+    obj->size--;
+    return true;
 }
 
 void json_object_free(JSONObject* obj)

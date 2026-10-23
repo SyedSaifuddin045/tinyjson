@@ -179,6 +179,80 @@ void test_object_free_frees_nested_containers(void)
     json_object_free(outer);
 }
 
+void test_object_supports_int_values(void)
+{
+    JSONObject *obj = json_object_init();
+
+    JSONValue v;
+    json_value_int(&v, INT64_C(9000000000));
+    TEST_ASSERT_TRUE(json_object_set(obj, "big", v));
+
+    const JSONValue *stored = json_object_get(obj, "big");
+    TEST_ASSERT_NOT_NULL(stored);
+    TEST_ASSERT_EQUAL_INT(JSON_INT, stored->type);
+    TEST_ASSERT_EQUAL_INT64(INT64_C(9000000000), stored->intValue);
+
+    json_object_free(obj);
+}
+
+void test_object_delete_removes_key(void)
+{
+    JSONObject *obj = json_object_init();
+
+    TEST_ASSERT_TRUE(json_object_set(obj, "a", number(1.0)));
+    TEST_ASSERT_TRUE(json_object_set(obj, "b", number(2.0)));
+    TEST_ASSERT_TRUE(json_object_set(obj, "c", number(3.0)));
+
+    TEST_ASSERT_TRUE(json_object_delete(obj, "b"));
+    TEST_ASSERT_EQUAL_UINT(2, (unsigned)obj->size);
+    TEST_ASSERT_NULL(json_object_get(obj, "b"));
+
+    /* Remaining keys survive and keep their order. */
+    TEST_ASSERT_EQUAL_STRING("a", obj->pairs[0].key);
+    TEST_ASSERT_EQUAL_STRING("c", obj->pairs[1].key);
+    TEST_ASSERT_EQUAL_DOUBLE(1.0, json_object_get(obj, "a")->numberValue);
+    TEST_ASSERT_EQUAL_DOUBLE(3.0, json_object_get(obj, "c")->numberValue);
+
+    json_object_free(obj);
+}
+
+void test_object_delete_missing_key_returns_false(void)
+{
+    JSONObject *obj = json_object_init();
+
+    TEST_ASSERT_TRUE(json_object_set(obj, "a", number(1.0)));
+    TEST_ASSERT_FALSE(json_object_delete(obj, "absent"));
+    TEST_ASSERT_EQUAL_UINT(1, (unsigned)obj->size);
+
+    json_object_free(obj);
+}
+
+void test_object_delete_rejects_null_arguments(void)
+{
+    JSONObject *obj = json_object_init();
+
+    TEST_ASSERT_TRUE(json_object_set(obj, "a", number(1.0)));
+    TEST_ASSERT_FALSE(json_object_delete(NULL, "a"));
+    TEST_ASSERT_FALSE(json_object_delete(obj, NULL));
+    TEST_ASSERT_EQUAL_UINT(1, (unsigned)obj->size);
+
+    json_object_free(obj);
+}
+
+void test_object_key_can_be_reinserted_after_delete(void)
+{
+    JSONObject *obj = json_object_init();
+
+    TEST_ASSERT_TRUE(json_object_set(obj, "a", number(1.0)));
+    TEST_ASSERT_TRUE(json_object_delete(obj, "a"));
+    TEST_ASSERT_TRUE(json_object_set(obj, "a", number(2.0)));
+
+    TEST_ASSERT_EQUAL_UINT(1, (unsigned)obj->size);
+    TEST_ASSERT_EQUAL_DOUBLE(2.0, json_object_get(obj, "a")->numberValue);
+
+    json_object_free(obj);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -193,5 +267,10 @@ int main(void)
     RUN_TEST(test_object_grows_beyond_initial_capacity);
     RUN_TEST(test_object_free_releases_string_payloads);
     RUN_TEST(test_object_free_frees_nested_containers);
+    RUN_TEST(test_object_supports_int_values);
+    RUN_TEST(test_object_delete_removes_key);
+    RUN_TEST(test_object_delete_missing_key_returns_false);
+    RUN_TEST(test_object_delete_rejects_null_arguments);
+    RUN_TEST(test_object_key_can_be_reinserted_after_delete);
     return UNITY_END();
 }

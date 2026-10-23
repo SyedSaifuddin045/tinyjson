@@ -74,6 +74,16 @@ bool json_array_push(JSONArray *array, JSONValue value)
     return true;
 }
 
+const JSONValue *json_array_get(const JSONArray *array, size_t index)
+{
+    if (array == NULL || index >= array->size)
+    {
+        return NULL;
+    }
+
+    return &array->values[index];
+}
+
 void json_array_free(JSONArray *array)
 {
     if (array == NULL)
