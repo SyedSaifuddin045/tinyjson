@@ -11,6 +11,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(unity)
 
+# Unity compiles double-precision assertions out unless UNITY_INCLUDE_DOUBLE is
+# defined for the framework itself, not just the tests.
+target_compile_definitions(unity PUBLIC UNITY_INCLUDE_DOUBLE)
+
 # ====================================================================
 # DYNAMIC TEST SETUP (AUTOMATED RECURSION)
 # ====================================================================
@@ -29,6 +33,9 @@ foreach(test_source_path IN LISTS test_files)
     
     # Link the executable against your library and Unity
     target_link_libraries(${test_name} PRIVATE TinyJSON unity)
+
+    # Enable double-precision assertions (TEST_ASSERT_EQUAL_DOUBLE).
+    target_compile_definitions(${test_name} PRIVATE UNITY_INCLUDE_DOUBLE)
     
     # Register this program as a separate test command inside CTest
     add_test(NAME ${test_name} COMMAND ${test_name})

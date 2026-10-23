@@ -29,20 +29,8 @@ void json_value_free(JSONValue *value)
     case JSON_ARRAY:
         if (value->arrayValue != NULL)
         {
-            JSONArray *array = value->arrayValue;
-
-            /* Recursively free every element's payload. */
-            for (size_t i = 0; i < array->size; i++)
-            {
-                json_value_free(&array->values[i]);
-            }
-
-            /* Free the array's element buffer. */
-            free(array->values);
-
-            /* Free the JSONArray structure itself. */
-            free(array);
-
+            /* Recursively frees elements, buffer and the struct itself. */
+            json_array_free(value->arrayValue);
             value->arrayValue = NULL;
         }
         break;
@@ -50,30 +38,8 @@ void json_value_free(JSONValue *value)
     case JSON_OBJECT:
         if (value->objectValue != NULL)
         {
-            JSONObject *object = value->objectValue;
-
-            /* Recursively free every key-value entry. */
-            for (size_t i = 0; i < object->size; i++)
-            {
-                JSONKeyValuePair *pair = &object->pairs[i];
-
-                /* Free the owned key string. */
-                if (pair->key != NULL)
-                {
-                    free(pair->key);
-                    pair->key = NULL;
-                }
-
-                /* Free the value's owned payload. */
-                json_value_free(&pair->value);
-            }
-
-            /* Free the entries buffer. */
-            free(object->pairs);
-
-            /* Free the JSONObject structure itself. */
-            free(object);
-
+            /* Recursively frees keys, values, pair buffer and the struct. */
+            json_object_free(value->objectValue);
             value->objectValue = NULL;
         }
         break;

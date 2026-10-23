@@ -1,6 +1,8 @@
 #include "unity.h"
 #include "tinyjson.h"
 
+#include <string.h>
+
 void setUp(void)
 {
 }
@@ -9,72 +11,69 @@ void tearDown(void)
 {
 }
 
-void test_json_array_init_and_free(void)
+static JSONValue null_value(void)
 {
-    JSONArray arr;
-    TEST_ASSERT_TRUE(json_array_init(&arr));
-    TEST_ASSERT_EQUAL_UINT(0, (unsigned)arr.size);
-    TEST_ASSERT_EQUAL_UINT(0, (unsigned)arr.capacity);
-    TEST_ASSERT_NULL(arr.values);
-
-    json_array_free(&arr);
-    TEST_ASSERT_EQUAL_UINT(0, (unsigned)arr.size);
-    TEST_ASSERT_EQUAL_UINT(0, (unsigned)arr.capacity);
-    TEST_ASSERT_NULL(arr.values);
-}
-
-void test_json_array_push_null_value(void)
-{
-    JSONArray arr;
-    json_array_init(&arr);
-
     JSONValue v;
+    memset(&v, 0, sizeof v);
     v.type = JSON_NULL;
-
-    TEST_ASSERT_TRUE(json_array_push(&arr, v));
-    TEST_ASSERT_EQUAL_UINT(1, (unsigned)arr.size);
-    TEST_ASSERT_TRUE(arr.capacity >= 1);
-
-    json_array_free(&arr);
+    return v;
 }
 
-void test_json_array_push_grows_capacity(void)
+void test_array_init_returns_empty_array(void)
 {
-    JSONArray arr;
-    json_array_init(&arr);
+    JSONArray *arr = json_array_init();
+
+    TEST_ASSERT_NOT_NULL(arr);
+    TEST_ASSERT_EQUAL_UINT(0, (unsigned)arr->size);
+    TEST_ASSERT_EQUAL_UINT(0, (unsigned)arr->capacity);
+    TEST_ASSERT_NULL(arr->values);
+
+    json_array_free(arr);
+}
+
+void test_array_free_null_is_noop(void)
+{
+    json_array_free(NULL);
+}
+
+void test_array_push_null_value(void)
+{
+    JSONArray *arr = json_array_init();
+
+    TEST_ASSERT_TRUE(json_array_push(arr, null_value()));
+    TEST_ASSERT_EQUAL_UINT(1, (unsigned)arr->size);
+    TEST_ASSERT_TRUE(arr->capacity >= 1);
+
+    json_array_free(arr);
+}
+
+void test_array_push_grows_capacity(void)
+{
+    JSONArray *arr = json_array_init();
 
     for (int i = 0; i < 10; i++)
     {
-        JSONValue v;
-        v.type = JSON_NULL;
-        TEST_ASSERT_TRUE(json_array_push(&arr, v));
+        TEST_ASSERT_TRUE(json_array_push(arr, null_value()));
     }
 
-    TEST_ASSERT_EQUAL_UINT(10, (unsigned)arr.size);
-    TEST_ASSERT_TRUE(arr.capacity >= 10);
+    TEST_ASSERT_EQUAL_UINT(10, (unsigned)arr->size);
+    TEST_ASSERT_TRUE(arr->capacity >= 10);
 
-    json_array_free(&arr);
+    json_array_free(arr);
 }
 
-void test_json_array_init_null(void)
+void test_array_push_null_array(void)
 {
-    TEST_ASSERT_FALSE(json_array_init(NULL));
-}
-
-void test_json_array_push_null_array(void)
-{
-    JSONValue v;
-    v.type = JSON_NULL;
-    TEST_ASSERT_FALSE(json_array_push(NULL, v));
+    TEST_ASSERT_FALSE(json_array_push(NULL, null_value()));
 }
 
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_json_array_init_and_free);
-    RUN_TEST(test_json_array_push_null_value);
-    RUN_TEST(test_json_array_push_grows_capacity);
-    RUN_TEST(test_json_array_init_null);
-    RUN_TEST(test_json_array_push_null_array);
+    RUN_TEST(test_array_init_returns_empty_array);
+    RUN_TEST(test_array_free_null_is_noop);
+    RUN_TEST(test_array_push_null_value);
+    RUN_TEST(test_array_push_grows_capacity);
+    RUN_TEST(test_array_push_null_array);
     return UNITY_END();
 }

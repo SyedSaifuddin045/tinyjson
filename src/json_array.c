@@ -3,18 +3,20 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-bool json_array_init(JSONArray *array)
+JSONArray* json_array_init(void)
 {
+    JSONArray* array = malloc(sizeof(JSONArray));
+
     if (array == NULL)
     {
-        return false;
+        return NULL;
     }
 
     array->size = 0;
     array->capacity = 0;
     array->values = NULL;
 
-    return true;
+    return array;
 }
 
 bool json_array_push(JSONArray *array, JSONValue value)
@@ -85,8 +87,5 @@ void json_array_free(JSONArray *array)
     }
 
     free(array->values);
-
-    array->values = NULL;
-    array->size = 0;
-    array->capacity = 0;
+    free(array);
 }
